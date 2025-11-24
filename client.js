@@ -165,6 +165,19 @@ async function deleteLink(code) {
   }
 }
 
+function copyLink(code) {
+  const url = window.location.origin + '/' + code;
+  navigator.clipboard.writeText(url);
+  
+  // Visual feedback
+  const btn = event.target;
+  const originalText = btn.textContent;
+  btn.textContent = 'copied!';
+  setTimeout(() => {
+    btn.textContent = originalText;
+  }, 2000);
+}
+
 async function editLink(code, currentUrl) {
   const newUrl = prompt('Edit destination URL:', currentUrl);
   if (!newUrl || newUrl === currentUrl) return;
@@ -200,6 +213,7 @@ function renderLinks(links, isFiltered = false) {
         <div class="link-header">
           <div class="link-short">/${link.code}</div>
           <div class="link-actions">
+            <button class="link-btn" onclick="copyLink('${link.code}')">copy</button>
             <button class="link-btn" onclick="editLink('${link.code}', '${escapeHtml(link.url)}')">edit</button>
             <button class="link-btn delete" onclick="deleteLink('${link.code}')">delete</button>
           </div>
