@@ -7,10 +7,10 @@ self-hosted url shortener for [yxorp](https://yxorp.app) users
 ```bash
 git clone <this-repo> shortlinks
 cd shortlinks
-node server.js
+node server.js  # runs on port 8765
 ```
 
-done. add to [yxorp](https://yxorp.app): `links.yourdomain.com → localhost:8765`
+configure in [yxorp](https://yxorp.app): `links.yourdomain.com → localhost:8765`
 
 ## what you get
 
@@ -39,11 +39,11 @@ redirects always work without auth. only creating/editing/deleting requires the 
 
 **reset password:** delete `data/password.txt` and restart the server.
 
-## env vars
+## configuration
 
 ```bash
-PORT=8080 node server.js            # change port (default: 8765)
-DATA_DIR=~/shortlinks node server.js # change data location (default: ./data)
+PORT=3456 node server.js                # custom port (default: 8765)
+DATA_DIR=~/shortlinks node server.js    # custom data location (default: ./data)
 ```
 
 ## api (optional)
