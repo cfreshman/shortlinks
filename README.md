@@ -7,7 +7,12 @@ self-hosted url shortener for [yxorp](https://yxorp.app) users
 ```bash
 git clone <this-repo> shortlinks
 cd shortlinks
-node server.js  # runs on port 8765
+
+# allow port through firewall
+sudo ufw allow 8765
+
+# run server
+PORT=8765 node server.js
 ```
 
 configure in [yxorp](https://yxorp.app): `links.yourdomain.com → localhost:8765`
@@ -23,12 +28,9 @@ configure in [yxorp](https://yxorp.app): `links.yourdomain.com → localhost:876
 ## optional: keep it running
 
 ```bash
-# option 1: pm2
 npm install -g pm2
-pm2 start server.js --name shortlinks
+PORT=8765 pm2 start server.js --name shortlinks
 pm2 save
-
-# option 2: systemd, screen, tmux, whatever
 ```
 
 ## security
