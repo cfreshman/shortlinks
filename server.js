@@ -4,28 +4,27 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const JsonDB = require('auto-json-db');
 const { generateThemeCSS } = require('./themes');
 
 const PORT = process.env.PORT || 8765;
 const DATA_DIR = process.env.DATA_DIR || './data';
 const THEME = process.env.THEME || 'default';
-const DATA_FILE = path.join(DATA_DIR, 'shortlinks.json');
-const PASSWORD_FILE = path.join(DATA_DIR, 'password.txt');
 
 // Ensure data directory exists
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-let passwordHash = null;
+// Initialize database
+const db = new JsonDB(path.join(DATA_DIR, 'shortlinks.json'));
 
-// Load password hash from file
-if (fs.existsSync(PASSWORD_FILE)) {
-  try {
-    passwordHash = fs.readFileSync(PASSWORD_FILE, 'utf8').trim();
-  } catch (e) {
-    console.error('Error loading password file:', e.message);
-  }
+// Initialize db structure if needed
+if (!db.data.passwordHash) {
+  db.data.passwordHash = null;
+}
+if (!db.data.links) {
+  db.data.links = {};
 }
 
 function hashPassword(password) {
@@ -33,23 +32,8 @@ function hashPassword(password) {
 }
 
 function verifyPassword(password) {
-  if (!passwordHash) return false;
-  return hashPassword(password) === passwordHash;
-}
-
-// Initialize data store
-let links = {};
-try {
-  if (fs.existsSync(DATA_FILE)) {
-    links = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
-  }
-} catch (e) {
-  console.error('Error loading data:', e.message);
-  links = {};
-}
-
-function saveLinks() {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(links, null, 2));
+  if (!db.data.passwordHash) return false;
+  return hashPassword(password) === db.data.passwordHash;
 }
 
 function generateShortCode(length = 6) {
@@ -60,7 +44,7 @@ function generateShortCode(length = 6) {
     for (let i = 0; i < length; i++) {
       code += chars[Math.floor(Math.random() * chars.length)];
     }
-  } while (links[code]);
+  } while (db.data.links[code]);
   return code;
 }
 
@@ -86,7 +70,7 @@ function serveFile(filePath, contentType, res) {
 }
 
 function checkAuth(req) {
-  if (!passwordHash) return true; // No password set, allow all
+  if (!db.data.passwordHash) return true; // No password set, allow all
   
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -133,8 +117,8 @@ const server = http.createServer((req, res) => {
   if (url.pathname === '/api/auth' && req.method === 'GET') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ 
-      needsSetup: !passwordHash,
-      requiresAuth: !!passwordHash,
+      needsSetup: !db.data.passwordHash,
+      requiresAuth: !!db.data.passwordHash,
       authenticated: checkAuth(req)
     }));
     return;
@@ -142,7 +126,7 @@ const server = http.createServer((req, res) => {
   
   // API: Setup password (only if none exists)
   if (url.pathname === '/api/setup' && req.method === 'POST') {
-    if (passwordHash) {
+    if (db.data.passwordHash) {
       res.writeHead(400, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Password already set' }));
       return;
@@ -160,8 +144,7 @@ const server = http.createServer((req, res) => {
           return;
         }
         
-        passwordHash = hashPassword(password);
-        fs.writeFileSync(PASSWORD_FILE, passwordHash);
+        db.data.passwordHash = hashPassword(password);
         
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: true }));
@@ -196,7 +179,7 @@ const server = http.createServer((req, res) => {
             res.end(JSON.stringify({ error: 'Custom code can only contain letters, numbers, dashes, and underscores' }));
             return;
           }
-          if (links[custom]) {
+          if (db.data.links[custom]) {
             res.writeHead(409, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: 'Custom code already exists' }));
             return;
@@ -206,14 +189,12 @@ const server = http.createServer((req, res) => {
           code = generateShortCode();
         }
         
-        links[code] = {
+        db.data.links[code] = {
           url,
           code,
           clicks: 0,
           created: new Date().toISOString()
         };
-        
-        saveLinks();
         
         res.writeHead(201, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ code, url }));
@@ -229,7 +210,7 @@ const server = http.createServer((req, res) => {
   if (url.pathname === '/api/links' && req.method === 'GET') {
     if (!requireAuth(req, res)) return;
     
-    const linkArray = Object.values(links).sort((a, b) => 
+    const linkArray = Object.values(db.data.links).sort((a, b) => 
       new Date(b.created) - new Date(a.created)
     ).slice(0, 50);
     
@@ -243,9 +224,8 @@ const server = http.createServer((req, res) => {
     if (!requireAuth(req, res)) return;
     
     const code = url.pathname.split('/')[3];
-    if (links[code]) {
-      delete links[code];
-      saveLinks();
+    if (db.data.links[code]) {
+      delete db.data.links[code];
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ success: true }));
     } else {
@@ -266,7 +246,7 @@ const server = http.createServer((req, res) => {
       try {
         const { url: newUrl } = JSON.parse(body);
         
-        if (!links[code]) {
+        if (!db.data.links[code]) {
           res.writeHead(404, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Link not found' }));
           return;
@@ -278,11 +258,10 @@ const server = http.createServer((req, res) => {
           return;
         }
         
-        links[code].url = newUrl;
-        saveLinks();
+        db.data.links[code].url = newUrl;
         
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: true, link: links[code] }));
+        res.end(JSON.stringify({ success: true, link: db.data.links[code] }));
       } catch (e) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Invalid request' }));
@@ -293,11 +272,10 @@ const server = http.createServer((req, res) => {
   
   // Redirect short link
   const code = url.pathname.slice(1);
-  if (code && links[code]) {
-    links[code].clicks++;
-    saveLinks();
+  if (code && db.data.links[code]) {
+    db.data.links[code].clicks++;
     
-    res.writeHead(302, { 'Location': links[code].url });
+    res.writeHead(302, { 'Location': db.data.links[code].url });
     res.end();
     return;
   }
@@ -310,7 +288,7 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, () => {
   console.log(`🔗 shortlinks running on http://localhost:${PORT}`);
   console.log(`📁 Data stored in ${path.resolve(DATA_DIR)}`);
-  if (passwordHash) {
+  if (db.data.passwordHash) {
     console.log(`🔒 Admin password required`);
   } else {
     console.log(`⚠️  No password set - first visitor will set password`);

@@ -1,0 +1,12 @@
+{
+  "name": "shortlinks",
+  "version": "1.0.0",
+  "description": "self-hosted url shortener for yxorp users",
+  "main": "server.js",
+  "dependencies": {
+    "auto-json-db": "^1.0.0"
+  },
+  "scripts": {
+    "start": "node server.js"
+  }
+}
