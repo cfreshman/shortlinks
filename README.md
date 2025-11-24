@@ -1,6 +1,6 @@
 # shortlinks
 
-self-hosted url shortener for yxorp users
+self-hosted url shortener for [yxorp](https://yxorp.app) users
 
 ## install
 
@@ -10,7 +10,7 @@ cd shortlinks
 node server.js
 ```
 
-done. add to yxorp: `links.yourdomain.com → localhost:8765`
+done. add to [yxorp](https://yxorp.app): `links.yourdomain.com → localhost:8765`
 
 ## what you get
 
