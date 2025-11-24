@@ -30,7 +30,7 @@ async function checkAuth() {
     
     if (data.needsSetup) {
       // First-time setup
-      const password = prompt('create admin password (min 4 characters):');
+      const password = prompt('create password (min 4 characters):');
       if (!password || password.length < 4) {
         alert('password must be at least 4 characters');
         await checkAuth();
@@ -71,7 +71,7 @@ async function checkAuth() {
       localStorage.removeItem('shortlinks_auth');
       authToken = null;
       
-      const password = prompt('enter admin password:');
+      const password = prompt('enter password:');
       if (!password) {
         document.body.innerHTML = `
           <div style="font-family: 'Google Sans Code', monospace; padding: 2rem; text-align: center; max-width: 400px; margin: 0 auto;">
@@ -134,10 +134,10 @@ form.addEventListener('submit', async (e) => {
 
 copyBtn.addEventListener('click', () => {
   navigator.clipboard.writeText(shortUrl.textContent);
-  copyBtn.textContent = 'Copied!';
+  copyBtn.textContent = 'copied!';
   copyBtn.classList.add('copied');
   setTimeout(() => {
-    copyBtn.textContent = 'Copy to Clipboard';
+    copyBtn.textContent = 'copy to clipboard';
     copyBtn.classList.remove('copied');
   }, 2000);
 });
