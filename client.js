@@ -8,6 +8,7 @@ const searchInput = document.getElementById('searchInput');
 
 let allLinks = [];
 let authToken = localStorage.getItem('shortlinks_auth') || null;
+let hasPromptedThisSession = false;
 
 function getHeaders() {
   const headers = { 'Content-Type': 'application/json' };
@@ -53,16 +54,8 @@ async function checkAuth() {
     }
     
     if (data.requiresAuth && !data.authenticated) {
-      // Wrong password or no password stored
-      localStorage.removeItem('shortlinks_auth');
-      authToken = null;
-      
-      const password = prompt('enter admin password:');
-      if (password) {
-        authToken = password;
-        localStorage.setItem('shortlinks_auth', password);
-        await checkAuth(); // Verify it works
-      } else {
+      if (hasPromptedThisSession) {
+        // Already prompted this page load, show error
         document.body.innerHTML = `
           <div style="font-family: 'Google Sans Code', monospace; padding: 2rem; text-align: center; max-width: 400px; margin: 0 auto;">
             <div style="font-size: 0.875rem; margin-bottom: 1rem;">incorrect or missing password</div>
@@ -71,7 +64,29 @@ async function checkAuth() {
             </div>
           </div>
         `;
+        return;
       }
+      
+      hasPromptedThisSession = true;
+      localStorage.removeItem('shortlinks_auth');
+      authToken = null;
+      
+      const password = prompt('enter admin password:');
+      if (!password) {
+        document.body.innerHTML = `
+          <div style="font-family: 'Google Sans Code', monospace; padding: 2rem; text-align: center; max-width: 400px; margin: 0 auto;">
+            <div style="font-size: 0.875rem; margin-bottom: 1rem;">incorrect or missing password</div>
+            <div style="font-size: 0.75rem; color: #999;">
+              <a href="https://github.com/cfreshman/shortlinks" style="color: #000; text-decoration: underline;">github.com/cfreshman/shortlinks</a>
+            </div>
+          </div>
+        `;
+        return;
+      }
+      
+      authToken = password;
+      localStorage.setItem('shortlinks_auth', password);
+      // Password stored - don't call checkAuth again, just continue
     }
   } catch (err) {
     console.error('Auth check failed:', err);
@@ -96,7 +111,7 @@ form.addEventListener('submit', async (e) => {
     
     if (res.status === 401) {
       localStorage.removeItem('shortlinks_auth');
-      location.reload();
+      authToken = null;
       return;
     }
     
@@ -138,7 +153,7 @@ async function deleteLink(code) {
     
     if (res.status === 401) {
       localStorage.removeItem('shortlinks_auth');
-      location.reload();
+      authToken = null;
       return;
     }
     
@@ -163,7 +178,7 @@ async function editLink(code, currentUrl) {
     
     if (res.status === 401) {
       localStorage.removeItem('shortlinks_auth');
-      location.reload();
+      authToken = null;
       return;
     }
     
@@ -226,7 +241,7 @@ async function loadLinks() {
     
     if (res.status === 401) {
       localStorage.removeItem('shortlinks_auth');
-      location.reload();
+      authToken = null;
       return;
     }
     
