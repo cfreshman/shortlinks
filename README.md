@@ -44,8 +44,11 @@ redirects always work without auth. only creating/editing/deleting requires the 
 ## configuration
 
 ```bash
-PORT=3456 node server.js                # custom port (default: 8765)
-DATA_DIR=~/shortlinks node server.js    # custom data location (default: ./data)
+PORT=3456 node server.js                    # custom port (default: 8765)
+DATA_DIR=~/shortlinks node server.js        # custom data location (default: ./data)
+THEME=beyondcool PORT=8765 node server.js   # use beyondcool theme (orange on black with glow)
+THEME=warm PORT=8765 node server.js         # use warm theme (cream background, brown text)
+THEME=hue120 PORT=8765 node server.js       # use hue-based theme (0-360, e.g. 120=green, 240=blue)
 ```
 
 ## api (optional)

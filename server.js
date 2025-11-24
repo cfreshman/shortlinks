@@ -4,9 +4,11 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { generateThemeCSS } = require('./themes');
 
 const PORT = process.env.PORT || 8765;
 const DATA_DIR = process.env.DATA_DIR || './data';
+const THEME = process.env.THEME || 'default';
 const DATA_FILE = path.join(DATA_DIR, 'shortlinks.json');
 const PASSWORD_FILE = path.join(DATA_DIR, 'password.txt');
 
@@ -109,17 +111,21 @@ const server = http.createServer((req, res) => {
   
   // Serve static files
   if (url.pathname === '/' && req.method === 'GET') {
-    serveFile('index.html', 'text/html', res);
+    const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+    const themeVars = generateThemeCSS(THEME);
+    const injectedHtml = html.replace('<style id="theme-vars"></style>', `<style id="theme-vars">${themeVars}</style>`);
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    res.end(injectedHtml);
     return;
   }
   
   if (url.pathname === '/styles.css' && req.method === 'GET') {
-    serveFile('styles.css', 'text/css', res);
+    serveFile(path.join(__dirname, 'styles.css'), 'text/css', res);
     return;
   }
   
   if (url.pathname === '/client.js' && req.method === 'GET') {
-    serveFile('client.js', 'application/javascript', res);
+    serveFile(path.join(__dirname, 'client.js'), 'application/javascript', res);
     return;
   }
   
